@@ -14,6 +14,7 @@ base_image = (
     modal.Image.from_registry(f"nvidia/cuda:{tag}", add_python="3.12")
     .apt_install("git", "libibverbs-dev", "libibverbs1")
     .workdir("/root")
+    # all just v6 stuff in my fork
     .run_commands(
         "git clone https://github.com/pawalt/verifiers.git",
     )
@@ -23,6 +24,8 @@ base_image = (
         "uv pip install -e .",
         "uv pip install flash-attn --no-build-isolation",
     )
+    # Need this so vllm weight sharing can use v6 as the control plane. the data plane is nccl rdma
+    # https://github.com/vllm-project/vllm/blob/d6fd3a33b863003929fc3eef5dd9828219e04ab0/vllm/distributed/utils.py#L392-L398
     .run_commands(
         "sed -i 's/AF_INET/AF_INET6/g' /root/verifiers/.venv/lib/python3.12/site-packages/vllm/distributed/utils.py"
     )
@@ -50,7 +53,7 @@ def run_vllm_server(cluster_info):
         "--model",
         MODEL_ID,
         "--tensor_parallel_size",
-        "4",  # Matches number of GPUs
+        "8",  # Matches number of GPUs
         "--max_model_len",
         "8192",
         "--gpu_memory_utilization",
@@ -86,7 +89,7 @@ def run_trainer(cluster_info):
 
     while True:
         try:
-            response = requests.get(vllm_server_url)  # Use the dynamic IP
+            response = requests.get(vllm_server_url)
             if response.status_code:  # Any status code means it's up
                 print(f"Container rank {rank} (Trainer): vLLM server is ready!")
                 break
