@@ -1,5 +1,7 @@
 import modal
 import modal.experimental
+import subprocess
+import time
 
 app = modal.App(name="verifiers")
 
@@ -33,10 +35,6 @@ MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
 
 def run_vllm_server(cluster_info):
     """Runs the vLLM server on rank 1."""
-    import subprocess  # Moved from global to local, as it's specific to this function
-    # import requests # Not used
-    # from requests.exceptions import ConnectionError # Not used
-    # import time # Not used
 
     rank = cluster_info.rank
     container_ips = cluster_info.container_ips
@@ -77,8 +75,6 @@ def run_trainer(cluster_info):
     """Runs the training process on rank 0, waiting for the vLLM server."""
     import requests
     from requests.exceptions import ConnectionError
-    import subprocess  # Moved from global to local
-    import time  # Moved from global to local
 
     rank = cluster_info.rank
     container_ips = cluster_info.container_ips
@@ -133,14 +129,8 @@ def run_trainer(cluster_info):
 )
 @modal.experimental.clustered(2, rdma=True)
 def run_grpo():
-    # import requests # No longer needed here
-    # from requests.exceptions import ConnectionError # No longer needed here
-    # import subprocess # No longer needed here
-    # import time # No longer needed here
-
     cluster_info = modal.experimental.get_cluster_info()
     rank = cluster_info.rank
-    # container_ips = cluster_info.container_ips # No longer needed here
 
     if rank == 1:
         run_vllm_server(cluster_info)
